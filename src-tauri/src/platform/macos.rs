@@ -5,9 +5,8 @@ use std::process::Command;
 use tauri::{Manager, WebviewWindow};
 
 use core_foundation_sys::base::{CFRelease, CFTypeRef};
-use core_foundation_sys::boolean::{CFBooleanGetValue, CFBooleanRef};
 use core_foundation_sys::dictionary::{CFDictionaryGetValue, CFDictionaryRef};
-use core_foundation_sys::string::{CFStringCreateWithCString, CFStringRef};
+use core_foundation_sys::string::CFStringCreateWithCString;
 
 #[link(name = "ApplicationServices", kind = "framework")]
 unsafe extern "C" {
@@ -22,6 +21,11 @@ unsafe extern "C" {
 #[link(name = "AppKit", kind = "framework")]
 unsafe extern "C" {
     fn NSBeep();
+}
+
+#[link(name = "CoreFoundation", kind = "framework")]
+unsafe extern "C" {
+    fn CFBooleanGetValue(boolean: *const c_void) -> u8;
 }
 
 #[link(name = "objc")]
@@ -48,7 +52,7 @@ pub fn is_locked() -> bool {
             false
         } else {
             let value = CFDictionaryGetValue(dictionary, key as *const c_void);
-            !value.is_null() && CFBooleanGetValue(value as CFBooleanRef) != 0
+            !value.is_null() && CFBooleanGetValue(value) != 0
         };
 
         if !key.is_null() {

@@ -2,7 +2,9 @@ use crate::actions;
 use crate::state::{AppState, Status};
 use std::sync::Arc;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::tray::{TrayIconBuilder, TrayIconEvent};
+use tauri::tray::TrayIconBuilder;
+#[cfg(target_os = "windows")]
+use tauri::tray::TrayIconEvent;
 use tauri::{AppHandle, Manager};
 
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
