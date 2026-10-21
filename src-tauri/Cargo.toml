@@ -1,0 +1,43 @@
+[package]
+name = "desk-reminder"
+version = "1.0.0"
+description = "桌面提醒 - 喝水与起立提醒"
+authors = ["DeskReminder"]
+repository = ""
+edition = "2024"
+rust-version = "1.85"
+
+[lib]
+name = "desk_reminder_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.3", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.4", features = ["tray-icon", "image-png", "macos-private-api"] }
+tauri-plugin-autostart = "2"
+tauri-plugin-log = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1", features = ["time"] }
+log = "0.4"
+tempfile = "3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation-sys = "0.8"
+
+[profile.dev]
+debug = 0
+
+[profile.test]
+debug = 0
+
+[profile.release]
+opt-level = 2
+codegen-units = 16
+lto = false
+strip = true
+

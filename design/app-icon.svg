@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="140" y1="90" x2="880" y2="960" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5EE0FF"/>
+      <stop offset="0.45" stop-color="#22B8F2"/>
+      <stop offset="1" stop-color="#4F6BFF"/>
+    </linearGradient>
+    <linearGradient id="drop" x1="512" y1="250" x2="512" y2="790" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DFF7FF"/>
+    </linearGradient>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#0B3A67" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect x="48" y="48" width="928" height="928" rx="224" fill="url(#bg)"/>
+  <circle cx="760" cy="250" r="170" fill="#FFFFFF" opacity="0.10"/>
+  <circle cx="228" cy="806" r="220" fill="#0B2A5B" opacity="0.08"/>
+  <g filter="url(#shadow)">
+    <path d="M512 238 C512 238 330 454 330 620 C330 721 411 802 512 802 C613 802 694 721 694 620 C694 454 512 238 512 238 Z" fill="url(#drop)"/>
+  </g>
+  <ellipse cx="438" cy="590" rx="46" ry="62" fill="#B8ECFF" opacity="0.9" transform="rotate(-18 438 590)"/>
+  <path d="M512 300 C512 300 380 470 380 600" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" opacity="0.6" fill="none"/>
+</svg>

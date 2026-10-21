@@ -1,0 +1,7 @@
+node_modules/
+dist/
+release/
+.setup/
+src-tauri/target/
+*.log
+.DS_Store
