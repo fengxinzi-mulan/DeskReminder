@@ -207,7 +207,9 @@ fn finish_now(app: &AppHandle, state: &Arc<AppState>, id: &str, action: &str) {
     }
 
     if let Some(window) = app.get_webview_window("toast") {
-        let _ = window.hide();
+        if let Err(err) = platform::hide_toast(&window) {
+            log::warn!("hide toast failed: {err}");
+        }
     }
     crate::actions::broadcast_status(app);
 
@@ -235,7 +237,7 @@ fn clear_all_now(app: &AppHandle, state: &Arc<AppState>) {
     };
     if had_active {
         if let Some(window) = app.get_webview_window("toast") {
-            let _ = window.hide();
+            let _ = platform::hide_toast(&window);
         }
     }
 }

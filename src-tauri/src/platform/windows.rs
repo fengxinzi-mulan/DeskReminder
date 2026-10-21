@@ -63,6 +63,7 @@ unsafe extern "system" {
 
 const DESKTOP_READOBJECTS: u32 = 0x0001;
 const DESKTOP_SWITCHDESKTOP: u32 = 0x0100;
+const SW_HIDE: i32 = 0;
 const SW_SHOWNOACTIVATE: i32 = 4;
 const HWND_TOPMOST: Hwnd = -1isize as Hwnd;
 const SWP_NOSIZE: u32 = 0x0001;
@@ -195,6 +196,24 @@ pub fn prepare_toast_window(window: &WebviewWindow) -> Result<(), String> {
         if SetWindowRgn(hwnd, region, 1) == 0 {
             return Err("设置圆角窗口区域失败".to_string());
         }
+    }
+    Ok(())
+}
+
+/// 显式隐藏并把窗口移出屏幕，避免 Tauri 与原生显示状态不同步时留下顶部残影。
+pub fn hide_toast(window: &WebviewWindow) -> Result<(), String> {
+    let hwnd = window.hwnd().map_err(|e| e.to_string())?.0;
+    unsafe {
+        ShowWindow(hwnd, SW_HIDE);
+        SetWindowPos(
+            hwnd,
+            HWND_TOPMOST,
+            -10000,
+            -10000,
+            0,
+            0,
+            SWP_NOSIZE | SWP_NOACTIVATE,
+        );
     }
     Ok(())
 }

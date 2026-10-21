@@ -2,7 +2,7 @@ use super::WorkArea;
 use std::ffi::c_void;
 use std::path::Path;
 use std::process::Command;
-use tauri::WebviewWindow;
+use tauri::{Manager, WebviewWindow};
 
 use core_foundation_sys::base::{CFRelease, CFTypeRef};
 use core_foundation_sys::boolean::{CFBooleanGetValue, CFBooleanRef};
@@ -89,6 +89,12 @@ pub fn primary_work_area(app: &tauri::AppHandle) -> Option<WorkArea> {
         width: size.width,
         height: size.height.saturating_sub(menu_bar as u32),
     })
+}
+
+pub fn hide_toast(window: &WebviewWindow) -> Result<(), String> {
+    window.hide().map_err(|e| e.to_string())?;
+    let _ = window.set_position(tauri::PhysicalPosition::new(-10000, -10000));
+    Ok(())
 }
 
 pub fn show_without_activating(window: &WebviewWindow) -> Result<(), String> {

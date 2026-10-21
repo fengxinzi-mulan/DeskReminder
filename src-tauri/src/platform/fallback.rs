@@ -20,6 +20,10 @@ pub fn prepare_toast_window(_window: &WebviewWindow) -> Result<(), String> {
     Ok(())
 }
 
+pub fn hide_toast(window: &WebviewWindow) -> Result<(), String> {
+    window.hide().map_err(|e| e.to_string())
+}
+
 pub fn show_without_activating(window: &WebviewWindow) -> Result<(), String> {
     window.show().map_err(|e| e.to_string())
 }
