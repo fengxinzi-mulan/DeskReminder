@@ -588,7 +588,6 @@ input[type="number"] {
   background:
     radial-gradient(120% 170% at 0% 0%, var(--accent-soft), transparent 52%),
     var(--card);
-  box-shadow: var(--shadow-pop);
   will-change: transform, opacity;
 }
 

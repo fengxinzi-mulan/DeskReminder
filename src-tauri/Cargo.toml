@@ -1,6 +1,6 @@
 [package]
 name = "desk-reminder"
-version = "1.1.2"
+version = "1.1.3"
 description = "桌面提醒 - 喝水与起立提醒"
 authors = ["DeskReminder"]
 repository = ""
