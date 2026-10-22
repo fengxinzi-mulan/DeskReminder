@@ -18,6 +18,8 @@ export function makeDefaultType(kind: TypeKind, id?: string): ReminderType {
       days: [1, 2, 3, 4, 5],
       snoozeMin: 10,
       popupSec: 12,
+      onceAt: "",
+      deleteAfter: false,
     };
   }
   if (kind === "stand") {
@@ -35,6 +37,8 @@ export function makeDefaultType(kind: TypeKind, id?: string): ReminderType {
       days: [1, 2, 3, 4, 5],
       snoozeMin: 10,
       popupSec: 12,
+      onceAt: "",
+      deleteAfter: false,
     };
   }
   return {
@@ -51,6 +55,8 @@ export function makeDefaultType(kind: TypeKind, id?: string): ReminderType {
     days: [1, 2, 3, 4, 5],
     snoozeMin: 10,
     popupSec: 12,
+    onceAt: "",
+    deleteAfter: false,
   };
 }
 

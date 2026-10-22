@@ -1,6 +1,6 @@
-use crate::config::{General, PopupPosition, ReminderType};
+use crate::config::{General, PopupPosition, ReminderType, RuleMode};
 use crate::platform::{self, WorkArea};
-use crate::state::{AppState, ToastItem, ToastPayload};
+use crate::state::{AppState, ToastItem, ToastPayload, ToastSource};
 use chrono::{Duration, Local};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition};
@@ -36,23 +36,23 @@ fn payload_from(
     }
 }
 
-pub fn enqueue_type(app: &AppHandle, state: &Arc<AppState>, type_id: &str, preview: bool) {
+pub fn enqueue_type(app: &AppHandle, state: &Arc<AppState>, type_id: &str, source: ToastSource) {
     let (payload, general_sound) = {
         let config = state.config.lock().unwrap();
         let Some(rule) = config.types.iter().find(|t| t.id == type_id) else {
             return;
         };
         (
-            payload_from(rule, &config.general, preview, state.next_toast_id()),
+            payload_from(
+                rule,
+                &config.general,
+                source == ToastSource::Preview,
+                state.next_toast_id(),
+            ),
             config.general.sound,
         )
     };
-    enqueue(
-        app,
-        state,
-        ToastItem { payload },
-        general_sound,
-    );
+    enqueue(app, state, ToastItem { payload, source }, general_sound);
 }
 
 pub fn enqueue_preview(
@@ -66,7 +66,15 @@ pub fn enqueue_preview(
         ..General::default()
     };
     let payload = payload_from(&rule, &general, true, state.next_toast_id());
-    enqueue(app, state, ToastItem { payload }, false);
+    enqueue(
+        app,
+        state,
+        ToastItem {
+            payload,
+            source: ToastSource::Preview,
+        },
+        false,
+    );
 }
 
 fn enqueue(app: &AppHandle, state: &Arc<AppState>, item: ToastItem, sound: bool) {
@@ -211,6 +219,9 @@ fn finish_now(app: &AppHandle, state: &Arc<AppState>, id: &str, action: &str) {
             log::warn!("hide toast failed: {err}");
         }
     }
+    if action != "snooze" && item.source == ToastSource::Scheduled {
+        delete_one_shot_if_needed(app, state, &item.payload.type_id);
+    }
     crate::actions::broadcast_status(app);
 
     let app_handle = app.clone();
@@ -219,6 +230,30 @@ fn finish_now(app: &AppHandle, state: &Arc<AppState>, id: &str, action: &str) {
         tokio::time::sleep(std::time::Duration::from_millis(180)).await;
         pump(&app_handle, &state_handle);
     });
+}
+
+/// 单次提醒关闭后按配置删除；只有调度器触发的提醒才动配置，预览和手动提醒不受影响。
+fn delete_one_shot_if_needed(app: &AppHandle, state: &Arc<AppState>, type_id: &str) {
+    let next = {
+        let config = state.config.lock().unwrap();
+        let Some(rule) = config.types.iter().find(|rule| rule.id == type_id) else {
+            return;
+        };
+        if rule.mode != RuleMode::Once || !rule.delete_after {
+            return;
+        }
+        let mut next = config.clone();
+        next.types.retain(|rule| rule.id != type_id);
+        next
+    };
+
+    match crate::actions::save_config_core(app, next, false) {
+        Ok(_) => {
+            let _ = app.emit("reminder:deleted", type_id);
+            log::info!("one-shot reminder {type_id} deleted after closing");
+        }
+        Err(err) => log::error!("delete one-shot reminder failed: {err}"),
+    }
 }
 
 pub fn clear_all(app: &AppHandle, state: &Arc<AppState>) {

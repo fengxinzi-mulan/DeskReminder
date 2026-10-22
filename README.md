@@ -24,9 +24,10 @@
 - 内置「喝水」「起立活动」，支持新增、复制、删除自定义提醒类型。
 - 所有类型都支持完整自定义：
   - 名称、提醒文案、强调色、启用开关
-  - 按间隔（如每 60 分钟）或固定时刻（如 09:30、11:00、15:30）
+  - 按间隔（如每 60 分钟）、固定时刻（如 09:30、11:00、15:30）或单次日期时间
   - 生效时段、生效星期
   - 弹窗停留秒数、稍后提醒分钟数
+- 单次提醒：指定日期和时间只提醒一次；可开启「提醒后删除」，弹窗关闭后自动移除该提醒。
 - 顶部无边框提醒卡片：滑入、倒计时进度、悬停暂停、完成/稍后、打开设置。
 - 多提醒同时到期时排队展示。
 - 托盘常驻：打开设置、立即提醒、暂停 30 分钟/1 小时/2 小时/今天、恢复、开机自启、退出。
@@ -46,6 +47,7 @@
 
 - **按间隔**：在生效时段内从起点对齐。例如 09:00–18:00、每 60 分钟 → 10:00、11:00…17:00。
 - **固定时刻**：按填写的时刻触发，必须落在生效时段内；多个时刻用「添加」逐个录入。
+- **单次**：选择具体日期和时间，到点只提醒一次。开启「提醒后删除」时，弹窗关闭（完成、超时或稍后弹完）会自动删除该提醒；未开启时条目保留并标记「已提醒」。
 - 首次提醒不会在应用启动时立即弹出，而是在下一个规则时刻触发。
 - 锁屏期间到点不弹，解锁后的下一次检查会补发一次。
 - 睡眠/休眠恢复后不会补发，直接重排下一次，并留 60 秒缓冲。
@@ -66,7 +68,7 @@ macOS：
 
 ## 安装包（Windows）
 
-推荐使用安装包：从 GitHub Releases 下载 `DeskReminder-Setup-1.0.0.exe`，或运行本地构建的 `release\DeskReminder-Setup-1.0.0.exe`。
+推荐使用安装包：从 GitHub Releases 下载 `DeskReminder-Setup-1.1.0.exe`，或运行本地构建的 `release\DeskReminder-Setup-1.1.0.exe`。
 
 安装向导支持：
 
@@ -86,7 +88,7 @@ macOS：
 .\installer\build-installer.ps1
 ```
 
-输出 `release\DeskReminder-Setup-1.0.0.exe`。脚本使用 NSIS；如果本机没有 `makensis.exe`，先执行一次 `npx tauri build --bundles nsis` 下载 NSIS 工具缓存。
+输出 `release\DeskReminder-Setup-1.1.0.exe`。脚本使用 NSIS；如果本机没有 `makensis.exe`，先执行一次 `npx tauri build --bundles nsis` 下载 NSIS 工具缓存。
 
 ## GitHub Actions 自动发布
 
@@ -99,13 +101,13 @@ macOS：
 发布新版本：
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 也可以在 GitHub Actions 页面手动触发 `workflow_dispatch`，只构建并保留 artifacts，不创建 Release。
 
-发版前请同步更新 `package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 和 `installer/DeskReminder.nsi` 中的版本号（当前 `1.0.0`）。macOS 产物默认未签名，正式分发需要 Apple Developer ID 签名和公证。
+发版前请同步更新 `package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 和 `installer/DeskReminder.nsi` 中的版本号（当前 `1.1.0`）。macOS 产物默认未签名，正式分发需要 Apple Developer ID 签名和公证。
 
 ## 开发与构建
 

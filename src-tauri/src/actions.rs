@@ -1,5 +1,5 @@
 use crate::config::{self, Config};
-use crate::state::{AppState, Status};
+use crate::state::{AppState, Status, ToastSource};
 use crate::toast;
 use chrono::{DateTime, Duration, Local, Timelike};
 use std::sync::atomic::Ordering;
@@ -193,7 +193,12 @@ pub fn status_tooltip(status: &Status) -> String {
         if let Ok(due) = DateTime::parse_from_rfc3339(next) {
             let local = due.with_timezone(&Local);
             let name = status.next_type.as_deref().unwrap_or("提醒");
-            return format!("桌面提醒 · 下次 {} {}", local.format("%H:%M"), name);
+            let label = if local.date_naive() == Local::now().date_naive() {
+                local.format("%H:%M").to_string()
+            } else {
+                local.format("%m-%d %H:%M").to_string()
+            };
+            return format!("桌面提醒 · 下次 {label} {name}");
         }
     }
     "桌面提醒 · 暂无提醒计划".to_string()
@@ -216,7 +221,7 @@ pub fn handle_menu_event(app: &AppHandle, id: &str) {
         _ if id.starts_with("remind:") => {
             let type_id = id.trim_start_matches("remind:");
             let state = state(app);
-            toast::enqueue_type(app, &state, type_id, false);
+            toast::enqueue_type(app, &state, type_id, ToastSource::Manual);
         }
         _ => {}
     }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  CalendarClock,
   CalendarDays,
   Clock3,
   Copy,
@@ -9,11 +10,21 @@ import {
   X,
 } from "lucide-react";
 import type { ReminderType } from "../lib/types";
-import { ACCENT_PRESETS, WEEKDAYS, isTimeValue, ruleSummary } from "../lib/format";
+import {
+  ACCENT_PRESETS,
+  WEEKDAYS,
+  defaultOnceAt,
+  isOncePast,
+  isTimeValue,
+  onceDatePart,
+  onceTimePart,
+  ruleSummary,
+} from "../lib/format";
 import {
   Badge,
   Button,
   ConfirmDialog,
+  DateInput,
   Field,
   Input,
   NumberStepper,
@@ -41,6 +52,21 @@ export function TypeEditor(props: {
   const duplicate = rule.fixedTimes.includes(newTime);
   const canAddTime = isTimeValue(newTime) && !timeOutsideWindow && !duplicate;
   const accentIsPreset = ACCENT_PRESETS.includes(rule.accent.toUpperCase());
+  const onceDate = onceDatePart(rule.onceAt);
+  const onceTime = onceTimePart(rule.onceAt);
+  const oncePast = rule.mode === "once" && isOncePast(rule.onceAt);
+
+  const setOnceDate = (date: string) => {
+    onChange({
+      onceAt: `${date || defaultOnceAt().slice(0, 10)}T${onceTime}`,
+    });
+  };
+
+  const setOnceTime = (time: string) => {
+    onChange({
+      onceAt: `${onceDate || defaultOnceAt().slice(0, 10)}T${time || "09:00"}`,
+    });
+  };
 
   const addTime = () => {
     if (!canAddTime) return;
@@ -160,7 +186,7 @@ export function TypeEditor(props: {
             <p className="hint mt-1">所有提醒类型都支持独立的规则。</p>
           </div>
           <Badge
-            tone="accent"
+            tone={oncePast ? "warning" : "accent"}
             className="max-w-[300px] truncate"
           >
             <span className="truncate" title={ruleSummary(rule)}>
@@ -178,11 +204,15 @@ export function TypeEditor(props: {
                   ...(mode === "fixed" && rule.fixedTimes.length === 0
                     ? { fixedTimes: ["10:00"] }
                     : {}),
+                  ...(mode === "once" && !rule.onceAt
+                    ? { onceAt: defaultOnceAt() }
+                    : {}),
                 })
               }
               options={[
                 { value: "interval", label: "按间隔", icon: <Clock3 className="h-3.5 w-3.5" /> },
                 { value: "fixed", label: "固定时刻", icon: <CalendarDays className="h-3.5 w-3.5" /> },
+                { value: "once", label: "单次", icon: <CalendarClock className="h-3.5 w-3.5" /> },
               ]}
             />
             {rule.mode === "interval" ? (
@@ -202,6 +232,32 @@ export function TypeEditor(props: {
               </div>
             ) : null}
           </div>
+
+          {rule.mode === "once" ? (
+            <Field
+              label="提醒时间"
+              hint={
+                oncePast
+                  ? "这个时间已经过去，不会再触发；请改到未来的时间。"
+                  : "只在指定时间提醒一次，之后不会重复。"
+              }
+            >
+              <div className="flex items-center gap-2">
+                <DateInput
+                  value={onceDate}
+                  onChange={setOnceDate}
+                  aria-label="单次提醒日期"
+                  className="!w-[160px]"
+                />
+                <TimeInput
+                  value={onceTime}
+                  onChange={setOnceTime}
+                  aria-label="单次提醒时间"
+                  className="!w-[108px]"
+                />
+              </div>
+            </Field>
+          ) : null}
 
           {rule.mode === "fixed" ? (
             <Field
@@ -249,64 +305,66 @@ export function TypeEditor(props: {
             </Field>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-5">
-            <Field label="生效时段" hint="每天只在这个时间段内提醒，结束时刻不含。">
-              <div className="flex items-center gap-2">
-                <TimeInput
-                  value={rule.windowStart}
-                  aria-label="生效开始时间"
-                  onChange={(windowStart) => onChange({ windowStart })}
-                />
-                <span style={{ color: "var(--subtle)" }}>–</span>
-                <TimeInput
-                  value={rule.windowEnd}
-                  aria-label="生效结束时间"
-                  onChange={(windowEnd) => onChange({ windowEnd })}
-                />
-              </div>
-            </Field>
-            <Field label="生效星期" hint="点击圆点切换；至少保留一天。">
-              <div className="flex flex-wrap items-center gap-2">
-                {WEEKDAYS.map((day) => (
-                  <button
-                    key={day.value}
-                    type="button"
-                    aria-label={`周${day.label}`}
-                    className={`day-pill ${rule.days.includes(day.value) ? "active" : ""}`}
-                    onClick={() => toggleDay(day.value)}
-                  >
-                    {day.label}
-                  </button>
-                ))}
-                <div className="ml-1 flex items-center gap-1.5 text-[11px]">
-                  <button
-                    type="button"
-                    className="rounded px-1.5 py-0.5 font-medium transition-colors hover:bg-[var(--card-2)]"
-                    style={{ color: "var(--accent-strong)" }}
-                    onClick={() => onChange({ days: [1, 2, 3, 4, 5] })}
-                  >
-                    工作日
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded px-1.5 py-0.5 font-medium transition-colors hover:bg-[var(--card-2)]"
-                    style={{ color: "var(--accent-strong)" }}
-                    onClick={() => onChange({ days: [1, 2, 3, 4, 5, 6, 7] })}
-                  >
-                    每天
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded px-1.5 py-0.5 font-medium transition-colors hover:bg-[var(--card-2)]"
-                    style={{ color: "var(--muted)" }}
-                    onClick={() => onChange({ days: [6, 7] })}
-                  >
-                    周末
-                  </button>
+          {rule.mode !== "once" ? (
+            <div className="grid grid-cols-2 gap-5">
+              <Field label="生效时段" hint="每天只在这个时间段内提醒，结束时刻不含。">
+                <div className="flex items-center gap-2">
+                  <TimeInput
+                    value={rule.windowStart}
+                    aria-label="生效开始时间"
+                    onChange={(windowStart) => onChange({ windowStart })}
+                  />
+                  <span style={{ color: "var(--subtle)" }}>–</span>
+                  <TimeInput
+                    value={rule.windowEnd}
+                    aria-label="生效结束时间"
+                    onChange={(windowEnd) => onChange({ windowEnd })}
+                  />
                 </div>
-              </div>
-            </Field>
-          </div>
+              </Field>
+              <Field label="生效星期" hint="点击圆点切换；至少保留一天。">
+                <div className="flex flex-wrap items-center gap-2">
+                  {WEEKDAYS.map((day) => (
+                    <button
+                      key={day.value}
+                      type="button"
+                      aria-label={`周${day.label}`}
+                      className={`day-pill ${rule.days.includes(day.value) ? "active" : ""}`}
+                      onClick={() => toggleDay(day.value)}
+                    >
+                      {day.label}
+                    </button>
+                  ))}
+                  <div className="ml-1 flex items-center gap-1.5 text-[11px]">
+                    <button
+                      type="button"
+                      className="rounded px-1.5 py-0.5 font-medium transition-colors hover:bg-[var(--card-2)]"
+                      style={{ color: "var(--accent-strong)" }}
+                      onClick={() => onChange({ days: [1, 2, 3, 4, 5] })}
+                    >
+                      工作日
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded px-1.5 py-0.5 font-medium transition-colors hover:bg-[var(--card-2)]"
+                      style={{ color: "var(--accent-strong)" }}
+                      onClick={() => onChange({ days: [1, 2, 3, 4, 5, 6, 7] })}
+                    >
+                      每天
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded px-1.5 py-0.5 font-medium transition-colors hover:bg-[var(--card-2)]"
+                      style={{ color: "var(--muted)" }}
+                      onClick={() => onChange({ days: [6, 7] })}
+                    >
+                      周末
+                    </button>
+                  </div>
+                </div>
+              </Field>
+            </div>
+          ) : null}
 
           <div
             className="flex items-start gap-2.5 rounded-xl border px-3.5 py-3"
@@ -353,6 +411,27 @@ export function TypeEditor(props: {
               onChange={(snoozeMin) => onChange({ snoozeMin })}
             />
           </Field>
+          {rule.mode === "once" ? (
+            <div
+              className="col-span-2 flex items-center justify-between gap-4 rounded-xl border px-3.5 py-3"
+              style={{
+                borderColor: "var(--border)",
+                background: "var(--card-2)",
+              }}
+            >
+              <div>
+                <div className="text-[13px] font-medium">提醒后删除</div>
+                <div className="hint mt-0.5">
+                  弹窗关闭后自动删除这条提醒；点「稍后」会等再次弹完再删。
+                </div>
+              </div>
+              <Switch
+                checked={rule.deleteAfter}
+                onCheckedChange={(deleteAfter) => onChange({ deleteAfter })}
+                aria-label="提醒后删除"
+              />
+            </div>
+          ) : null}
         </div>
       </section>
 

@@ -1,4 +1,4 @@
-export type RuleMode = "interval" | "fixed";
+export type RuleMode = "interval" | "fixed" | "once";
 export type Theme = "system" | "light" | "dark";
 export type PopupPosition = "top-center" | "top-right";
 
@@ -16,6 +16,8 @@ export interface ReminderType {
   days: number[];
   snoozeMin: number;
   popupSec: number;
+  onceAt: string;
+  deleteAfter: boolean;
 }
 
 export interface General {

@@ -7,7 +7,7 @@ mod state;
 mod toast;
 mod tray;
 
-use crate::state::{AppState, Snapshot};
+use crate::state::{AppState, Snapshot, ToastSource};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tauri::{Manager, State};
@@ -80,7 +80,6 @@ fn open_config_dir(app: tauri::AppHandle) -> Result<(), String> {
     actions::open_config_dir(&app)
 }
 
-
 fn position_settings_window(app: &tauri::AppHandle) {
     use tauri::{Manager, PhysicalPosition};
 
@@ -126,7 +125,7 @@ pub fn run() {
                         .first()
                         .map(|rule| rule.id.clone())
                     {
-                        toast::enqueue_type(&app, &state, &id, true);
+                        toast::enqueue_type(&app, &state, &id, ToastSource::Preview);
                     }
                 }
             });
@@ -236,7 +235,7 @@ pub fn run() {
                     .first()
                     .map(|rule| rule.id.clone());
                 if let Some(type_id) = type_id {
-                    toast::enqueue_type(app.handle(), &state, &type_id, true);
+                    toast::enqueue_type(app.handle(), &state, &type_id, ToastSource::Preview);
                 }
             }
 

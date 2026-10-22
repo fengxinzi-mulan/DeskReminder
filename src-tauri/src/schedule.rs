@@ -1,13 +1,20 @@
-use crate::config::{format_hhmm, parse_hhmm, local_datetime, ReminderType, RuleMode};
+use crate::config::{
+    ReminderType, RuleMode, format_hhmm, local_datetime, parse_hhmm, parse_once_at,
+};
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 
 /// 计算严格晚于 `now` 的下一次触发时间。
 ///
 /// 间隔模式从生效时段起点对齐：09:00 起每 60 分钟 => 10:00、11:00…
 /// 固定时刻模式只取落在生效时段内、且在 `now` 之后的时间点。
+/// 单次模式只返回指定的日期时间，过后返回 `None`，不会重复。
 pub fn next_due(rule: &ReminderType, now: DateTime<Local>) -> Option<DateTime<Local>> {
     if !rule.enabled {
         return None;
+    }
+    if rule.mode == RuleMode::Once {
+        let at = parse_once_at(&rule.once_at)?;
+        return (at > now).then_some(at);
     }
     let start_min = parse_hhmm(&rule.window_start)?;
     let end_min = parse_hhmm(&rule.window_end)?;
@@ -41,6 +48,8 @@ pub fn next_due(rule: &ReminderType, now: DateTime<Local>) -> Option<DateTime<Lo
         }
 
         match rule.mode {
+            // 单次模式已在函数开头返回。
+            RuleMode::Once => return None,
             RuleMode::Interval => {
                 let mut slot = start + Duration::minutes(interval);
                 while slot < end {
@@ -160,5 +169,32 @@ mod tests {
         let mut r = rule();
         r.days.clear();
         assert!(next_due(&r, at(2026, 10, 19, 9, 0)).is_none());
+    }
+
+    #[test]
+    fn once_mode_fires_at_selected_time() {
+        let mut r = rule();
+        r.mode = RuleMode::Once;
+        r.once_at = "2026-10-23T15:00".to_string();
+        assert_eq!(
+            next_due(&r, at(2026, 10, 23, 14, 0)).unwrap(),
+            at(2026, 10, 23, 15, 0)
+        );
+        assert!(next_due(&r, at(2026, 10, 23, 15, 0)).is_none());
+        assert!(next_due(&r, at(2026, 10, 23, 16, 0)).is_none());
+    }
+
+    #[test]
+    fn once_mode_ignores_window_and_days() {
+        let mut r = rule();
+        r.mode = RuleMode::Once;
+        r.once_at = "2026-10-24T20:00".to_string();
+        r.window_start = "09:00".to_string();
+        r.window_end = "18:00".to_string();
+        r.days = vec![1];
+        assert_eq!(
+            next_due(&r, at(2026, 10, 23, 14, 0)).unwrap(),
+            at(2026, 10, 24, 20, 0)
+        );
     }
 }

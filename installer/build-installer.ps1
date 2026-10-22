@@ -38,10 +38,10 @@ try {
     Pop-Location
 }
 
-$output = Join-Path $root "release\DeskReminder-Setup-1.0.0.exe"
+$output = Join-Path $root "release\DeskReminder-Setup-1.1.0.exe"
 if (Test-Path $output) {
     $size = [math]::Round((Get-Item $output).Length / 1MB, 1)
-    Write-Host "安装包已生成：release\DeskReminder-Setup-1.0.0.exe ($size MB)"
+    Write-Host "安装包已生成：release\DeskReminder-Setup-1.1.0.exe ($size MB)"
 } else {
     throw "未找到安装包输出文件。"
 }

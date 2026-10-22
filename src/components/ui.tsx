@@ -427,3 +427,20 @@ export function TimeInput(props: {
     />
   );
 }
+
+export function DateInput(props: {
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+  "aria-label"?: string;
+}) {
+  return (
+    <input
+      type="date"
+      aria-label={props["aria-label"]}
+      className={cn("input", props.className)}
+      value={props.value}
+      onChange={(event) => props.onChange(event.target.value)}
+    />
+  );
+}

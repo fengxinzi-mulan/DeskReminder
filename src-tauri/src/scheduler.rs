@@ -2,7 +2,7 @@ use crate::actions;
 use crate::config;
 use crate::platform;
 use crate::schedule;
-use crate::state::AppState;
+use crate::state::{AppState, ToastSource};
 use crate::toast;
 use chrono::{Duration, Local};
 use std::sync::atomic::Ordering;
@@ -183,7 +183,7 @@ fn tick(app: &AppHandle, state: &Arc<AppState>) -> Result<(), String> {
                 rule.name,
                 schedule::human_time(now)
             );
-            toast::enqueue_type(app, state, &rule.id, false);
+            toast::enqueue_type(app, state, &rule.id, ToastSource::Scheduled);
         }
         status_changed = true;
     } else {

@@ -43,6 +43,12 @@ pub struct ReminderType {
     pub snooze_min: u32,
     #[serde(default = "default_popup")]
     pub popup_sec: u32,
+    /// 单次提醒的本地时间，格式 `YYYY-MM-DDTHH:MM`；其他模式忽略。
+    #[serde(default)]
+    pub once_at: String,
+    /// 单次提醒弹窗关闭后删除该类型；仅在 `mode == Once` 时生效。
+    #[serde(default)]
+    pub delete_after: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -51,6 +57,7 @@ pub enum RuleMode {
     #[default]
     Interval,
     Fixed,
+    Once,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -136,6 +143,8 @@ impl ReminderType {
             days: vec![1, 2, 3, 4, 5],
             snooze_min: 10,
             popup_sec: 12,
+            once_at: String::new(),
+            delete_after: false,
         }
     }
 
@@ -154,6 +163,8 @@ impl ReminderType {
             days: vec![1, 2, 3, 4, 5],
             snooze_min: 10,
             popup_sec: 12,
+            once_at: String::new(),
+            delete_after: false,
         }
     }
 }
@@ -185,9 +196,7 @@ pub fn format_hhmm(minutes: u32) -> String {
 }
 
 pub fn valid_accent(value: &str) -> bool {
-    value.len() == 7
-        && value.starts_with('#')
-        && value[1..].chars().all(|c| c.is_ascii_hexdigit())
+    value.len() == 7 && value.starts_with('#') && value[1..].chars().all(|c| c.is_ascii_hexdigit())
 }
 
 impl Config {
@@ -246,6 +255,20 @@ impl Config {
             t.days.retain(|d| (1..=7).contains(d));
             t.days.sort_unstable();
             t.days.dedup();
+
+            if t.mode == RuleMode::Once {
+                t.once_at = t.once_at.trim().to_string();
+                if t.once_at.is_empty() {
+                    errors.push(format!("{prefix}请选择单次提醒的日期和时间"));
+                } else if parse_once_at(&t.once_at).is_none() {
+                    errors.push(format!("{prefix}单次提醒时间格式应为 YYYY-MM-DDTHH:MM"));
+                }
+                if t.days.is_empty() {
+                    t.days = default_days();
+                }
+                continue;
+            }
+
             if t.days.is_empty() {
                 errors.push(format!("{prefix}至少选择一个生效星期"));
             }
@@ -291,7 +314,9 @@ impl Config {
                         t.fixed_times = normalized;
                     }
                 }
-                (Some(_), Some(_)) => errors.push(format!("{prefix}生效时段的结束时间必须晚于开始时间")),
+                (Some(_), Some(_)) => {
+                    errors.push(format!("{prefix}生效时段的结束时间必须晚于开始时间"))
+                }
                 _ => errors.push(format!("{prefix}生效时段格式应为 HH:MM")),
             }
 
@@ -386,15 +411,12 @@ fn backup_bad_config(path: &Path) -> Option<PathBuf> {
 }
 
 pub fn save_atomic(path: &Path, config: &Config) -> Result<(), String> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| "配置目录无效".to_string())?;
+    let parent = path.parent().ok_or_else(|| "配置目录无效".to_string())?;
     fs::create_dir_all(parent).map_err(|e| format!("创建配置目录失败：{e}"))?;
 
     let mut tmp = tempfile::NamedTempFile::new_in(parent)
         .map_err(|e| format!("创建临时配置文件失败：{e}"))?;
-    serde_json::to_writer_pretty(&mut tmp, config)
-        .map_err(|e| format!("序列化配置失败：{e}"))?;
+    serde_json::to_writer_pretty(&mut tmp, config).map_err(|e| format!("序列化配置失败：{e}"))?;
     tmp.write_all(b"\n")
         .map_err(|e| format!("写入配置失败：{e}"))?;
     tmp.as_file()
@@ -417,13 +439,25 @@ pub fn local_datetime(date: NaiveDate, minute_of_day: u32) -> Option<chrono::Dat
     None
 }
 
+/// 解析单次提醒时间（`YYYY-MM-DDTHH:MM`，本地时区）。
+pub fn parse_once_at(value: &str) -> Option<chrono::DateTime<Local>> {
+    let (date, time) = value.trim().split_once('T')?;
+    if date.len() != 10 {
+        return None;
+    }
+    let date = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?;
+    local_datetime(date, parse_hhmm(time)?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn defaults_are_valid() {
-        let config = default_config().normalize().expect("defaults must validate");
+        let config = default_config()
+            .normalize()
+            .expect("defaults must validate");
         assert_eq!(config.types.len(), 2);
         assert!(config.types.iter().all(|t| !t.days.is_empty()));
     }
@@ -479,5 +513,53 @@ mod tests {
         assert_eq!(parse_hhmm("9:05"), None);
         assert_eq!(parse_hhmm("24:00"), None);
         assert_eq!(format_hhmm(545), "09:05");
+    }
+
+    #[test]
+    fn once_mode_requires_valid_datetime() {
+        let mut config = default_config();
+        config.types[0].mode = RuleMode::Once;
+
+        config.types[0].once_at = "2026-10-23 15:00".to_string();
+        assert!(config.clone().normalize().is_err());
+
+        config.types[0].once_at = "2026-10-23T15:00".to_string();
+        assert!(config.normalize().is_ok());
+    }
+
+    #[test]
+    fn once_mode_ignores_window_and_days() {
+        let mut config = default_config();
+        config.types[0].mode = RuleMode::Once;
+        config.types[0].once_at = "2026-10-23T20:30".to_string();
+        config.types[0].window_start = "19:00".to_string();
+        config.types[0].window_end = "18:00".to_string();
+        config.types[0].days.clear();
+        assert!(config.normalize().is_ok());
+    }
+
+    #[test]
+    fn legacy_config_defaults_once_fields() {
+        let raw = r#"{
+            "version": 1,
+            "types": [{
+                "id": "custom-1",
+                "name": "一次性事项",
+                "message": "记得处理"
+            }],
+            "general": {}
+        }"#;
+        let config: Config = serde_json::from_str(raw).expect("legacy config must parse");
+        assert_eq!(config.types[0].once_at, "");
+        assert!(!config.types[0].delete_after);
+        assert_eq!(config.types[0].mode, RuleMode::Interval);
+    }
+
+    #[test]
+    fn parses_once_at() {
+        assert!(parse_once_at("2026-10-23T15:00").is_some());
+        assert!(parse_once_at("2026-10-23 15:00").is_none());
+        assert!(parse_once_at("2026-13-23T15:00").is_none());
+        assert!(parse_once_at("2026-10-23T25:00").is_none());
     }
 }

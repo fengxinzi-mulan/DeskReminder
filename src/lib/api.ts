@@ -29,3 +29,7 @@ export function onStatus(handler: (payload: import("./types").Status) => void): 
 export function onConfig(handler: (payload: Config) => void): Promise<UnlistenFn> {
   return listen<Config>("config:updated", (event) => handler(event.payload));
 }
+
+export function onReminderDeleted(handler: (typeId: string) => void): Promise<UnlistenFn> {
+  return listen<string>("reminder:deleted", (event) => handler(event.payload));
+}

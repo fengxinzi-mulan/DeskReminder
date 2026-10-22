@@ -21,9 +21,20 @@ pub struct ToastPayload {
     pub preview: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ToastSource {
+    /// 调度器按规则触发；只有这种来源会让单次提醒在关闭后自动删除。
+    Scheduled,
+    /// 托盘「立即提醒」等手动触发。
+    Manual,
+    /// 设置页预览。
+    Preview,
+}
+
 #[derive(Debug, Clone)]
 pub struct ToastItem {
     pub payload: ToastPayload,
+    pub source: ToastSource,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import type { Config, General, ReminderType, Snapshot, Status } from "../lib/types";
-import { api, onConfig, onStatus } from "../lib/api";
+import { api, onConfig, onReminderDeleted, onStatus } from "../lib/api";
 import { useResolvedTheme } from "../lib/use-theme";
 import { kindOf, makeDefaultType, newId } from "../lib/defaults";
 import { shortRuleSummary, statusText, statusTone } from "../lib/format";
@@ -55,6 +55,14 @@ export function Settings() {
     () => config?.types.find((rule) => rule.id === selectedId) ?? null,
     [config, selectedId],
   );
+
+  // 后端可能删除已触发的一次性提醒，选中项随之失效。
+  useEffect(() => {
+    if (!config) return;
+    if (selectedId && !config.types.some((rule) => rule.id === selectedId)) {
+      setSelectedId(config.types[0]?.id ?? null);
+    }
+  }, [config, selectedId]);
 
   useEffect(() => {
     let alive = true;
@@ -102,6 +110,20 @@ export function Settings() {
               },
             }
           : next,
+      );
+    }).then((unlisten) => {
+      if (active) unlisteners.push(unlisten);
+      else unlisten();
+    });
+    void onReminderDeleted((typeId) => {
+      if (!active) return;
+      setConfig((previous) =>
+        previous
+          ? {
+              ...previous,
+              types: previous.types.filter((rule) => rule.id !== typeId),
+            }
+          : previous,
       );
     }).then((unlisten) => {
       if (active) unlisteners.push(unlisten);
@@ -514,7 +536,7 @@ export function Settings() {
                 general={config.general}
                 status={status}
                 configPath={snapshot?.configPath ?? ""}
-                version={snapshot?.version ?? "1.0.0"}
+                version={snapshot?.version ?? "1.1.0"}
                 onChange={patchGeneral}
                 onPause={(minutes) => runAction(() => api.pause(minutes))}
                 onPauseToday={() => runAction(() => api.pauseToday())}
@@ -524,7 +546,7 @@ export function Settings() {
             ) : null}
 
             {page === "about" ? (
-              <AboutPanel version={snapshot?.version ?? "1.0.0"} />
+              <AboutPanel version={snapshot?.version ?? "1.1.0"} />
             ) : null}
           </div>
         </main>
