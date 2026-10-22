@@ -5,7 +5,7 @@
 
 !define APP_NAME "桌面提醒"
 !define APP_ID "DeskReminder"
-!define APP_VERSION "1.1.1"
+!define APP_VERSION "1.1.2"
 !define APP_PUBLISHER "DeskReminder"
 !define APP_EXE "DeskReminder.exe"
 !define RUN_KEY "Software\Microsoft\Windows\CurrentVersion\Run"
@@ -30,7 +30,7 @@ BrandingText "${APP_NAME} ${APP_VERSION}"
 Icon "app.ico"
 UninstallIcon "app.ico"
 
-VIProductVersion "1.1.1.0"
+VIProductVersion "1.1.2.0"
 VIAddVersionKey "ProductName" "${APP_NAME}"
 VIAddVersionKey "FileDescription" "${APP_NAME} 安装程序"
 VIAddVersionKey "FileVersion" "${APP_VERSION}"

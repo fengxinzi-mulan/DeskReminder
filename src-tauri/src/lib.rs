@@ -196,7 +196,7 @@ pub fn run() {
                 "toast",
                 tauri::WebviewUrl::App("index.html#/toast".into()),
             )
-            .title("桌面提醒")
+            .title("")
             .inner_size(436.0, 176.0)
             .resizable(false)
             .decorations(false)

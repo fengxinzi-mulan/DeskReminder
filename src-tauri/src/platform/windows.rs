@@ -41,6 +41,18 @@ unsafe extern "system" {
     fn SystemParametersInfoW(action: u32, param: u32, data: *mut c_void, win_ini: u32) -> i32;
     fn GetWindowLongW(hwnd: Hwnd, index: i32) -> i32;
     fn SetWindowLongW(hwnd: Hwnd, index: i32, value: i32) -> i32;
+    fn EnumChildWindows(hwnd: Hwnd, callback: Option<ChildEnumProc>, lparam: isize) -> i32;
+}
+
+#[link(name = "dwmapi")]
+unsafe extern "system" {
+    fn DwmSetWindowAttribute(hwnd: Hwnd, attribute: u32, value: *const c_void, size: u32) -> i32;
+}
+
+#[link(name = "comctl32")]
+unsafe extern "system" {
+    fn SetWindowSubclass(hwnd: Hwnd, proc_: ToastSubclassProc, id: usize, data: usize) -> i32;
+    fn DefSubclassProc(hwnd: Hwnd, msg: u32, wparam: usize, lparam: isize) -> isize;
 }
 
 #[link(name = "kernel32")]
@@ -69,7 +81,55 @@ const WS_SYSMENU: i32 = 0x0008_0000;
 const WS_POPUP: i32 = 0x8000_0000u32 as i32;
 const WS_EX_TOOLWINDOW: i32 = 0x0000_0080;
 const WS_EX_APPWINDOW: i32 = 0x0004_0000;
+const WS_EX_NOACTIVATE: i32 = 0x0800_0000;
 const SWP_FRAMECHANGED: u32 = 0x0020;
+const DWMWA_NCRENDERING_POLICY: u32 = 2;
+const DWMNCRP_DISABLED: u32 = 1;
+const WM_MOUSEACTIVATE: u32 = 0x0021;
+const WM_NCPAINT: u32 = 0x0085;
+const WM_NCACTIVATE: u32 = 0x0086;
+const MA_NOACTIVATE: isize = 3;
+
+type ToastSubclassProc = unsafe extern "system" fn(
+    hwnd: Hwnd,
+    msg: u32,
+    wparam: usize,
+    lparam: isize,
+    id: usize,
+    data: usize,
+) -> isize;
+type ChildEnumProc = unsafe extern "system" fn(hwnd: Hwnd, lparam: isize) -> i32;
+
+/// WebView2 子窗口点击会激活父窗口，激活时系统还会补画原生标题栏。
+/// 子类化拦截 WM_MOUSEACTIVATE 和顶层的 WM_NCPAINT / WM_NCACTIVATE；
+/// 鼠标事件仍会送达页面按钮，但窗口保持不激活且不绘制标题栏。
+unsafe extern "system" fn toast_subclass(
+    hwnd: Hwnd,
+    msg: u32,
+    wparam: usize,
+    lparam: isize,
+    id: usize,
+    _data: usize,
+) -> isize {
+    if id == 1 {
+        // 阻止系统在窗口激活时绘制原生标题栏。
+        if msg == WM_NCPAINT {
+            return 0;
+        }
+        if msg == WM_NCACTIVATE {
+            return 1;
+        }
+    }
+    if msg == WM_MOUSEACTIVATE {
+        return MA_NOACTIVATE;
+    }
+    unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
+}
+
+unsafe extern "system" fn subclass_child(hwnd: Hwnd, _lparam: isize) -> i32 {
+    unsafe { SetWindowSubclass(hwnd, toast_subclass, 2, 0) };
+    1
+}
 
 pub fn is_locked() -> bool {
     unsafe {
@@ -150,8 +210,18 @@ pub fn prepare_toast_window(window: &WebviewWindow) -> Result<(), String> {
         SetWindowLongW(
             hwnd,
             GWL_EXSTYLE,
-            (ex_style | WS_EX_TOOLWINDOW) & !WS_EX_APPWINDOW,
+            (ex_style | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE) & !WS_EX_APPWINDOW,
         );
+
+        // 关闭 DWM 非客户区渲染，避免窗口被激活时闪出原生标题栏。
+        let policy = DWMNCRP_DISABLED;
+        DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_NCRENDERING_POLICY,
+            &policy as *const u32 as *const c_void,
+            std::mem::size_of::<u32>() as u32,
+        );
+        SetWindowSubclass(hwnd, toast_subclass, 1, 0);
 
         SetWindowPos(
             hwnd,
@@ -193,6 +263,7 @@ pub fn show_without_activating(window: &WebviewWindow) -> Result<(), String> {
     let hwnd = window.hwnd().map_err(|e| e.to_string())?;
     let raw: Hwnd = hwnd.0;
     unsafe {
+        EnumChildWindows(raw, Some(subclass_child), 0);
         ShowWindow(raw, SW_SHOWNOACTIVATE);
         SetWindowPos(
             raw,
