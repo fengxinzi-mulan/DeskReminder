@@ -41,19 +41,6 @@ unsafe extern "system" {
     fn SystemParametersInfoW(action: u32, param: u32, data: *mut c_void, win_ini: u32) -> i32;
     fn GetWindowLongW(hwnd: Hwnd, index: i32) -> i32;
     fn SetWindowLongW(hwnd: Hwnd, index: i32, value: i32) -> i32;
-    fn SetWindowRgn(hwnd: Hwnd, region: *mut c_void, redraw: i32) -> i32;
-}
-
-#[link(name = "gdi32")]
-unsafe extern "system" {
-    fn CreateRoundRectRgn(
-        left: i32,
-        top: i32,
-        right: i32,
-        bottom: i32,
-        width: i32,
-        height: i32,
-    ) -> *mut c_void;
 }
 
 #[link(name = "kernel32")]
@@ -148,10 +135,9 @@ pub fn primary_work_area(_app: &tauri::AppHandle) -> Option<WorkArea> {
 }
 
 /// Tauri 2.12 在 Windows 上仍会给 `decorations(false)` 的透明窗口加原生标题栏。
-/// 这里直接改 Win32 样式，并用圆角区域把窗口裁成卡片形状，避免依赖透明背景。
+/// 这里直接改 Win32 样式，圆角交给 CSS 和透明窗口合成，避免 GDI 区域裁剪产生锯齿。
 pub fn prepare_toast_window(window: &WebviewWindow) -> Result<(), String> {
     let hwnd = window.hwnd().map_err(|e| e.to_string())?.0;
-    let scale = window.scale_factor().map_err(|e| e.to_string())?;
 
     unsafe {
         let style = GetWindowLongW(hwnd, GWL_STYLE);
@@ -178,25 +164,10 @@ pub fn prepare_toast_window(window: &WebviewWindow) -> Result<(), String> {
         );
     }
 
-    // 去掉非客户区后恢复设计尺寸，再按卡片的 8px 外边距和 18px 圆角裁剪窗口。
+    // 去掉非客户区后恢复设计尺寸；圆角与透明边缘由页面 CSS 绘制。
     window
         .set_size(tauri::LogicalSize::new(436.0, 176.0))
         .map_err(|e| e.to_string())?;
-    let size = window.outer_size().map_err(|e| e.to_string())?;
-    let inset = (8.0 * scale).round() as i32;
-    let radius = (18.0 * scale).round() as i32;
-    let right = (size.width as i32 - inset).max(inset + 1);
-    let bottom = (size.height as i32 - inset).max(inset + 1);
-
-    unsafe {
-        let region = CreateRoundRectRgn(inset, inset, right, bottom, radius * 2, radius * 2);
-        if region.is_null() {
-            return Err("创建圆角窗口区域失败".to_string());
-        }
-        if SetWindowRgn(hwnd, region, 1) == 0 {
-            return Err("设置圆角窗口区域失败".to_string());
-        }
-    }
     Ok(())
 }
 

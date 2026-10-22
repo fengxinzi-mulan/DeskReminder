@@ -68,7 +68,7 @@ macOS：
 
 ## 安装包（Windows）
 
-推荐使用安装包：从 GitHub Releases 下载 `DeskReminder-Setup-1.1.0.exe`，或运行本地构建的 `release\DeskReminder-Setup-1.1.0.exe`。
+推荐使用安装包：从 GitHub Releases 下载 `DeskReminder-Setup-1.1.1.exe`，或运行本地构建的 `release\DeskReminder-Setup-1.1.1.exe`。
 
 安装向导支持：
 
@@ -88,7 +88,7 @@ macOS：
 .\installer\build-installer.ps1
 ```
 
-输出 `release\DeskReminder-Setup-1.1.0.exe`。脚本使用 NSIS；如果本机没有 `makensis.exe`，先执行一次 `npx tauri build --bundles nsis` 下载 NSIS 工具缓存。
+输出 `release\DeskReminder-Setup-1.1.1.exe`。脚本使用 NSIS；如果本机没有 `makensis.exe`，先执行一次 `npx tauri build --bundles nsis` 下载 NSIS 工具缓存。
 
 ## GitHub Actions 自动发布
 
@@ -101,13 +101,13 @@ macOS：
 发布新版本：
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.1.1
+git push origin v1.1.1
 ```
 
 也可以在 GitHub Actions 页面手动触发 `workflow_dispatch`，只构建并保留 artifacts，不创建 Release。
 
-发版前请同步更新 `package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 和 `installer/DeskReminder.nsi` 中的版本号（当前 `1.1.0`）。macOS 产物默认未签名，正式分发需要 Apple Developer ID 签名和公证。
+发版前请同步更新 `package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 和 `installer/DeskReminder.nsi` 中的版本号（当前 `1.1.1`）。macOS 产物默认未签名，正式分发需要 Apple Developer ID 签名和公证。
 
 ## 开发与构建
 

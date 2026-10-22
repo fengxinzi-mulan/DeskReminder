@@ -536,7 +536,7 @@ export function Settings() {
                 general={config.general}
                 status={status}
                 configPath={snapshot?.configPath ?? ""}
-                version={snapshot?.version ?? "1.1.0"}
+                version={snapshot?.version ?? "1.1.1"}
                 onChange={patchGeneral}
                 onPause={(minutes) => runAction(() => api.pause(minutes))}
                 onPauseToday={() => runAction(() => api.pauseToday())}
@@ -546,7 +546,7 @@ export function Settings() {
             ) : null}
 
             {page === "about" ? (
-              <AboutPanel version={snapshot?.version ?? "1.1.0"} />
+              <AboutPanel version={snapshot?.version ?? "1.1.1"} />
             ) : null}
           </div>
         </main>
